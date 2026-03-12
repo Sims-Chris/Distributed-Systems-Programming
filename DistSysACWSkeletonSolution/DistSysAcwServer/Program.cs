@@ -1,6 +1,7 @@
 using DistSysAcwServer.Middleware;
 using DistSysAcwServer.Pipeline;
 using DistSysAcwServer.Shared;
+using DistSysAcwServer.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using System.Reflection;
@@ -8,6 +9,8 @@ using System.Reflection;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.AddScoped<UserAccess>();
 
 builder.Services.AddScoped<SharedError>();
 builder.Services.AddTransient<DistSysAcwServer.Pipeline.ErrorHandlingMiddleware>();

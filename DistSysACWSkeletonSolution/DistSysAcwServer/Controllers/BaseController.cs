@@ -1,6 +1,8 @@
-﻿using DistSysAcwServer.Middleware;
+﻿using DistSysAcwServer.Data;
+using DistSysAcwServer.Middleware;
 using DistSysAcwServer.Shared;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DistSysAcwServer.Controllers
 {
@@ -20,6 +22,9 @@ namespace DistSysAcwServer.Controllers
         /// </summary>
         protected SharedError Error { get; set; }
 
+
+        protected UserAccess UserProvider { get; set; }
+
         /// <summary>
         /// Abstract base controller containing a dependency-injected scoped DbContext (UserContext).
         /// Inherit from this abstract base to access the common DbContext in a controller.
@@ -29,6 +34,8 @@ namespace DistSysAcwServer.Controllers
         {
             DbContext = dbcontext;
             Error = error;
+
+            UserProvider = new UserAccess(dbcontext);
         }
     }
 }
