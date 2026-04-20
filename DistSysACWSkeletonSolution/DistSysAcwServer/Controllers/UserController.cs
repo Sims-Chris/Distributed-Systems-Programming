@@ -87,6 +87,38 @@ namespace DistSysAcwServer.Controllers
             // 3. Return false if user doesn't exist, or requester lacks permission
             return Ok(false);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("ChangeRole")]
+        public IActionResult ChangeRole([FromBody] ChangeRoleRequest request)
+        {
+            try
+            {
+                // 1. Validation: Check if role is valid
+                if (request.role != "User" && request.role != "Admin")
+                {
+                    return BadRequest("NOT DONE: Role does not exist");
+                }
+
+                // 2. Validation: Check if username exists
+                var user = DbContext.Users.FirstOrDefault(u => u.UserName == request.username);
+                if (user == null)
+                {
+                    return BadRequest("NOT DONE: Username does not exist");
+                }
+
+                // 3. Update the role
+                user.Role = request.role;
+                DbContext.SaveChanges();
+
+                return Ok("DONE");
+            }
+            catch (Exception)
+            {
+                // 4. Fallback for all other error cases
+                return BadRequest("NOT DONE: An error occured");
+            }
+        }
     }
 }
 
