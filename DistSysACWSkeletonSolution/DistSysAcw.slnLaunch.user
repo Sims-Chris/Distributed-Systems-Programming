@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "DistSysAcwClient\\DistSysAcwClient.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "DistSysAcwServer\\DistSysAcwServer.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
