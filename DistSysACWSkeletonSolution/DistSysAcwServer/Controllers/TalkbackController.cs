@@ -50,5 +50,33 @@ namespace DistSysAcwServer.Controllers
             return Ok(integers);
         }
         #endregion
+
+        #region PROTRECTED END POINTS
+        // 1. Accessible by ANYONE with a valid API Key
+        [Authorize(Roles = "Admin, User")]
+        [HttpGet("HelloAll")]
+        public IActionResult HelloAll()
+        {
+            return Ok("Hello Everyone's World");
+        }
+
+        // 2. Accessible ONLY by the Admin (the first user created)
+        [Authorize(Roles = "Admin")]
+        [HttpGet("adminonly")]
+        public IActionResult AdminOnly()
+        {
+            return Ok("Success: You are an Admin.");
+        }
+
+        // 3. Testing Name Claim: Returns the username from the API Key
+        [Authorize(Roles = "Admin, User")]
+        [HttpGet("WhoAmI")]
+        public IActionResult WhoAmI()
+        {
+            // This tests if your ClaimTypes.Name was set correctly in Task 5
+            string username = User.Identity.Name;
+            return Ok($"You are logged in as: {username}");
+        }
+        #endregion
     }
 }

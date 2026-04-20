@@ -33,13 +33,15 @@ namespace DistSysAcwServer.Auth
         /// <param name="requirement">Authorisation requirements</param>
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, RolesAuthorizationRequirement requirement)
         {
-            // requirement.AllowedRoles contains the roles that are allowed to access the action
-            // context.User contains the user trying to access the action
-            // context.Succeed(requirement) is used to succeed the requirement
-            // context.Fail() is used to fail the requirement
-
-            context.Fail();
-
+            // Check if the user has any of the roles required by the [Authorize] attribute
+            if (requirement.AllowedRoles.Any(role => context.User.IsInRole(role)))
+            {
+                context.Succeed(requirement);
+            }
+            else
+            {
+                context.Fail();
+            }
             return Task.CompletedTask;
         }
     }

@@ -48,5 +48,17 @@
             }
             return false;
         }
+
+        public bool DeleteUserByUsername(string username)
+        {
+            var user = _dbContext.Users.FirstOrDefault(u => u.UserName == username);
+            if (user != null)
+            {
+                _dbContext.Users.Remove(user);
+                _dbContext.SaveChanges();
+                return true;
+            }
+            return false;
+        }
     }
 }

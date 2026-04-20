@@ -1,6 +1,9 @@
-﻿using DistSysAcwServer.Models;
+﻿using DistSysAcwServer.Data;
+using DistSysAcwServer.Models;
 using DistSysAcwServer.Shared;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DistSysAcwServer.Controllers
 {
@@ -55,6 +58,34 @@ namespace DistSysAcwServer.Controllers
 
             // 5. Return the API Key
             return Ok(newUser.ApiKey);
+        }
+
+        [Authorize(Roles = "Admin, User")]
+        [HttpDelete("RemoveUser")]
+        public IActionResult RemoveUser([FromQuery] string username)
+        {
+            // 1. Identify the requester from the Task 5 Authentication Claims
+            string requesterApiKey = Request.Headers["ApiKey"];
+            string requesterName = User.Identity.Name;
+            bool isAdmin = User.IsInRole("Admin");
+
+            // 2. Logic: Admin can delete anyone; Users can only delete themselves
+            if (isAdmin || requesterName == username)
+            {
+                // Find the user to delete
+                var userToDelete = DbContext.Users.FirstOrDefault(u => u.UserName == username);
+
+                if (userToDelete != null)
+                {
+                    // Perform deletion
+                    DbContext.Users.Remove(userToDelete);
+                    DbContext.SaveChanges();
+                    return Ok(true); // Successfully deleted
+                }
+            }
+
+            // 3. Return false if user doesn't exist, or requester lacks permission
+            return Ok(false);
         }
     }
 }
