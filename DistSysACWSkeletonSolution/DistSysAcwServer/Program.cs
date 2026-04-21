@@ -1,10 +1,13 @@
+using DistSysAcwServer.Data;
 using DistSysAcwServer.Middleware;
 using DistSysAcwServer.Pipeline;
+using DistSysAcwServer.Pipeline.Auth;
 using DistSysAcwServer.Shared;
-using DistSysAcwServer.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddTransient<IAuthorizationHandler, DistSysAcwServer.Auth.CustomAuthorizationHandlerMiddleware>();
 
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -47,5 +51,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+
 
 app.Run();

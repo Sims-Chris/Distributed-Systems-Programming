@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using DistSysAcwServer.Pipeline.Auth;
 using DistSysAcwServer.Shared; // Ensure you include this namespace
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,17 @@ namespace DistSysAcwServer.Controllers
                 byte[] hashBytes = sha256Hash.ComputeHash(sourceBytes);
                 string hash = BitConverter.ToString(hashBytes).Replace("-", "");
                 return Ok(hash);
+            }
+        }
+
+        [HttpGet("GetPublicKey")]
+        public IActionResult GetPublicKey()
+        {
+            // Requirement: Return the server's RSA public key in XML format [cite: 234, 626]
+            using (RSA rsa = RSA.Create())
+            {
+                string publicKeyXml = RsaKeyService.GetPublicKeyXml();
+                return Ok(publicKeyXml);
             }
         }
     }

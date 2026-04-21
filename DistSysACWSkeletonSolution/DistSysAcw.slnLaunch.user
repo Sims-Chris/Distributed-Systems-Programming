@@ -4,11 +4,13 @@
     "Projects": [
       {
         "Path": "DistSysAcwClient\\DistSysAcwClient.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "DistSysAcwClient"
       },
       {
         "Path": "DistSysAcwServer\\DistSysAcwServer.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "IIS Express"
       }
     ]
   }
