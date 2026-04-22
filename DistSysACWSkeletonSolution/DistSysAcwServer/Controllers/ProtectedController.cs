@@ -66,5 +66,30 @@ namespace DistSysAcwServer.Controllers
                 return Ok(publicKeyXml);
             }
         }
+
+        [HttpGet("Sign")]
+        public IActionResult Sign([FromQuery] string message)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                return BadRequest("Bad Request");
+            }
+
+            try
+            {
+                // Get the central RSA provider (which contains the private key)
+                RSACryptoServiceProvider rsa = RsaKeyService.GetProvider();
+
+                byte[] dataToSign = Encoding.ASCII.GetBytes(message);
+                byte[] signature = rsa.SignData(dataToSign, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+
+                string hexSignature = BitConverter.ToString(signature);
+                return Ok(hexSignature);
+            }
+            catch (Exception)
+            {
+                return BadRequest("Bad Request");
+            }
+        }
     }
 }

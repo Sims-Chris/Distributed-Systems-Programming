@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -110,11 +111,16 @@ namespace DistSysAcwClient
                 }
 
                 // 11. Protected Get PublicKey
-                else if (lowerInput.StartsWith("proctected get publickey"))
+                else if (lowerInput.StartsWith("protected get publickey"))
                 {
                     if (CheckAuth()) await GetPublicKey("protected/getpublickey", true);
                 }
 
+                else if (lowerInput.StartsWith("protected sign"))
+                {
+                    string msg = input.Substring(14).Trim();
+                    if (CheckAuth()) await ProtectedSign(msg);
+                }
                 else
                 {
                     Console.WriteLine("Unknown command.");
@@ -227,7 +233,7 @@ namespace DistSysAcwClient
                     // Store the XML string for later encryption use
                     _storedServerPublicKeyXML = await response.Content.ReadAsStringAsync();
 
-                    if (!string.IsNullOrEmpty(_serverPublicKey))
+                    if (!string.IsNullOrEmpty(_storedServerPublicKeyXML))
                     {
                         Console.WriteLine("Got Public Key");
                     }
@@ -245,6 +251,40 @@ namespace DistSysAcwClient
             catch (Exception)
             {
                 Console.WriteLine("Couldn’t Get the Public Key");
+            }
+        }
+        private static async Task ProtectedSign(string message)
+        {
+            if (string.IsNullOrEmpty(_storedServerPublicKeyXML))
+            {
+                Console.WriteLine("Client doesn't yet have the public key");
+                return;
+            }
+
+            Console.WriteLine("...please wait...");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}protected/sign?message={Uri.EscapeDataString(message)}");
+            request.Headers.Add("ApiKey", currentApiKey);
+
+            var response = await client.SendAsync(request);
+            string hexSignature = await response.Content.ReadAsStringAsync();
+            hexSignature = hexSignature.Trim('"'); // Remove JSON quotes if present
+
+            try
+            {
+                // Convert hex with dashes back to byte array
+                byte[] signatureBytes = hexSignature.Split('-').Select(x => Convert.ToByte(x, 16)).ToArray();
+                byte[] dataToVerify = Encoding.ASCII.GetBytes(message);
+
+                using var rsa = new RSACryptoServiceProvider();
+                rsa.FromXmlString(_storedServerPublicKeyXML);
+
+                bool isValid = rsa.VerifyData(dataToVerify, signatureBytes, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+
+                Console.WriteLine(isValid ? "Message was successfully signed" : "Message was not successfully signed");
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Message was not successfully signed");
             }
         }
         #endregion
