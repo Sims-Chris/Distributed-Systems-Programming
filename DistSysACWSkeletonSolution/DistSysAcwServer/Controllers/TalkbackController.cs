@@ -57,6 +57,8 @@ namespace DistSysAcwServer.Controllers
         [HttpGet("HelloAll")]
         public IActionResult HelloAll()
         {
+
+            UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Talkback/HelloAll");
             return Ok("Hello Everyone's World");
         }
 
@@ -65,6 +67,7 @@ namespace DistSysAcwServer.Controllers
         [HttpGet("adminonly")]
         public IActionResult AdminOnly()
         {
+            UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Talkback/AdminOnly");
             return Ok("Success: You are an Admin.");
         }
 
@@ -75,6 +78,7 @@ namespace DistSysAcwServer.Controllers
         {
             // This tests if your ClaimTypes.Name was set correctly in Task 5
             string username = User.Identity.Name;
+            UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Talkback/WhoAmI");
             return Ok($"You are logged in as: {username}");
         }
         #endregion

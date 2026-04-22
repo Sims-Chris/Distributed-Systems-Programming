@@ -19,6 +19,7 @@ namespace DistSysAcwServer.Controllers
         public IActionResult Hello()
         {
             string username = User.Identity.Name;
+            UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/Hello");
             return Ok($"Hello {username}");
         }
 
@@ -35,6 +36,7 @@ namespace DistSysAcwServer.Controllers
                 byte[] sourceBytes = Encoding.ASCII.GetBytes(message);
                 byte[] hashBytes = sha1Hash.ComputeHash(sourceBytes);
                 string hash = BitConverter.ToString(hashBytes).Replace("-", "");
+                UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/SHA1");
                 return Ok(hash);
             }
         }
@@ -52,6 +54,7 @@ namespace DistSysAcwServer.Controllers
                 byte[] sourceBytes = Encoding.ASCII.GetBytes(message);
                 byte[] hashBytes = sha256Hash.ComputeHash(sourceBytes);
                 string hash = BitConverter.ToString(hashBytes).Replace("-", "");
+                UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/SHA256");
                 return Ok(hash);
             }
         }
@@ -63,6 +66,7 @@ namespace DistSysAcwServer.Controllers
             using (RSA rsa = RSA.Create())
             {
                 string publicKeyXml = RsaKeyService.GetPublicKeyXml();
+                UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/GetPublicKey");
                 return Ok(publicKeyXml);
             }
         }
@@ -84,6 +88,7 @@ namespace DistSysAcwServer.Controllers
                 byte[] signature = rsa.SignData(dataToSign, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
 
                 string hexSignature = BitConverter.ToString(signature);
+                UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/Sign");
                 return Ok(hexSignature);
             }
             catch (Exception)

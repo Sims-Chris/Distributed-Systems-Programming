@@ -6,14 +6,25 @@ namespace DistSysAcwServer.Models
     {
         public UserContext() : base() { }
 
-        public required DbSet<User> Users { get; set; }
-
-        //TODO: Task13
+        public DbSet<User> Users { get; set; }
+        public DbSet<Log> Logs { get; set; }
+        public DbSet<LogArchive> LogArchives { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            //If you change this connection string during development, it must be replaced before submission
             optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=DistSysAcw;");
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // Task 13: Define the relationship explicitly
+            // This ensures that when we query a User, EF knows where to find their Logs
+            modelBuilder.Entity<Log>()
+                .HasOne<User>()
+                .WithMany(u => u.Logs)
+                .HasForeignKey(l => l.UserApiKey);
+
+            base.OnModelCreating(modelBuilder);
         }
     }
 }

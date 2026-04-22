@@ -77,10 +77,12 @@ namespace DistSysAcwServer.Controllers
 
                 if (userToDelete != null)
                 {
-                    // Perform deletion
-                    DbContext.Users.Remove(userToDelete);
-                    DbContext.SaveChanges();
-                    return Ok(true); // Successfully deleted
+                    bool success = UserProvider.DeleteUserByUsername(username);
+
+                    // Log the operation
+                    UserProvider.LogActivity(requesterApiKey, $"User requested /api/User/RemoveUser for {username}");
+
+                    if (success) { return Ok(true); } // Successfully deleted
                 }
             }
 
@@ -111,6 +113,7 @@ namespace DistSysAcwServer.Controllers
                 user.Role = request.role;
                 DbContext.SaveChanges();
 
+                UserProvider.LogActivity(Request.Headers["ApiKey"], $"User requested /api/User/ChangeRole for {request.username}");
                 return Ok("DONE");
             }
             catch (Exception)

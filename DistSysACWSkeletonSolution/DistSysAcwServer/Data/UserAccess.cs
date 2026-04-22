@@ -1,4 +1,8 @@
-﻿namespace DistSysAcwServer.Data
+﻿using DistSysAcwServer.Models;
+using Microsoft.EntityFrameworkCore; // Ensure this is here!
+
+
+namespace DistSysAcwServer.Data
 {
     public class UserAccess
     {
@@ -49,16 +53,52 @@
             return false;
         }
 
+
         public bool DeleteUserByUsername(string username)
+    {
+        // 1. Find the user first
+        var user = _dbContext.Users.FirstOrDefault(u => u.UserName == username);
+
+        if (user != null)
         {
-            var user = _dbContext.Users.FirstOrDefault(u => u.UserName == username);
+            // 2. SAFETY: Manually fetch the logs for this specific API Key 
+            // This bypasses any issues with the virtual collection not loading
+            var userLogs = _dbContext.Logs.Where(l => l.UserApiKey == user.ApiKey).ToList();
+
+            // 3. Transfer to archive
+            foreach (var log in userLogs)
+            {
+                var archivedLog = new Models.LogArchive
+                {
+                    LogString = log.LogString,
+                    LogDateTime = log.LogDateTime,
+                    OriginalApiKey = user.ApiKey
+                };
+                _dbContext.LogArchives.Add(archivedLog);
+            }
+
+            // 4. Remove the user (this will trigger the cascade delete for active logs)
+            _dbContext.Users.Remove(user);
+
+            // 5. Save all changes
+            _dbContext.SaveChanges();
+            return true;
+        }
+        return false;
+    }
+
+    public void LogActivity(string apiKey, string logMessage)
+        {
+            var user = GetUserByApiKey(apiKey);
             if (user != null)
             {
-                _dbContext.Users.Remove(user);
+                // Use the new constructor from Step 1
+                Log newLog = new Log(logMessage);
+
+                // Add to the user's collection
+                user.Logs.Add(newLog);
                 _dbContext.SaveChanges();
-                return true;
             }
-            return false;
         }
     }
 }
