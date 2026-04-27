@@ -17,8 +17,8 @@ namespace DistSysAcwClient
         private static string _storedServerPublicKeyXML = null;
 
         // Ensure this ends with a forward slash for easy concatenation
-        //private const string BaseUrl = "http://distsysacwserver.net.dcs.hull.ac.uk/4710625/Api/";
-        private const string BaseUrl = "http://localhost:53415/api/";
+        private const string BaseUrl = "http://distsysacwserver.net.dcs.hull.ac.uk/4710625/Api/";
+        //private const string BaseUrl = "http://localhost:53415/api/";
 
         static async Task Main(string[] args)
         {
@@ -75,10 +75,11 @@ namespace DistSysAcwClient
                 else if (lowerInput.StartsWith("user set"))
                 {
                     var parts = input.Substring(8).Trim().Split(' ');
+                   
                     if (parts.Length >= 2)
                     {
-                        currentUsername = parts[0];
-                        currentApiKey = parts[1];
+                        currentUsername = parts[0].Trim();
+                        currentApiKey = parts[1].Trim().Trim('"');
                         Console.WriteLine("Stored");
                     }
                 }
@@ -121,6 +122,11 @@ namespace DistSysAcwClient
                     string msg = input.Substring(14).Trim();
                     if (CheckAuth()) await ProtectedSign(msg);
                 }
+                else if (lowerInput.StartsWith("protected mashify"))
+                {
+                    string message = input.Substring(17).Trim();
+                    if (CheckAuth()) await ProtectedMashify(message);
+                }
                 else
                 {
                     Console.WriteLine("Unknown command.");
@@ -157,8 +163,8 @@ namespace DistSysAcwClient
 
             if (response.IsSuccessStatusCode)
             {
-                currentApiKey = responseBody;
-                currentUsername = username;
+                currentApiKey = responseBody.Trim('"');
+                currentUsername = username.Trim('"');
                 Console.WriteLine("Got API Key");
                 Console.WriteLine(currentApiKey);
             }
@@ -239,18 +245,19 @@ namespace DistSysAcwClient
                     }
                     else
                     {
-                        Console.WriteLine("Couldn’t Get the Public Key");
+                        Console.WriteLine("Couldn’t Get the Public Key as it was empty");
                     }
                 }
                 else
                 {
                     // Optional: for debugging, you could log the status code here
-                    Console.WriteLine("Couldn’t Get the Public Key");
+                    Console.WriteLine("Couldn’t Get the Public Key as it wasnt fetched");
+                    Console.WriteLine(response);
                 }
             }
             catch (Exception)
             {
-                Console.WriteLine("Couldn’t Get the Public Key");
+                Console.WriteLine("Couldn’t Get the Public Key as something crashed");
             }
         }
         private static async Task ProtectedSign(string message)
@@ -287,6 +294,78 @@ namespace DistSysAcwClient
                 Console.WriteLine("Message was not successfully signed");
             }
         }
+
+        private static async Task ProtectedMashify(string message)
+        {
+            // Requirement: Check if public key exists
+            if (string.IsNullOrEmpty(_storedServerPublicKeyXML))
+            {
+                Console.WriteLine("Client doesn't yet have the public key");
+                return;
+            }
+
+            Console.WriteLine("...please wait...");
+
+            try
+            {
+                using Aes aes = Aes.Create();
+                aes.KeySize = 256;
+                aes.BlockSize = 128;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.GenerateKey();
+                aes.GenerateIV();
+
+                byte[] aesKey = aes.Key;
+                byte[] aesIV = aes.IV;
+
+                // RSA Encryption using the Server's Public Key
+                using var rsa = new RSACryptoServiceProvider();
+                rsa.FromXmlString(_storedServerPublicKeyXML);
+
+                // Requirement: Use OaepSHA1 padding
+                byte[] encryptedString = rsa.Encrypt(Encoding.ASCII.GetBytes(message), RSAEncryptionPadding.OaepSHA1);
+                byte[] encryptedKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA1);
+                byte[] encryptedIV = rsa.Encrypt(aesIV, RSAEncryptionPadding.OaepSHA1);
+
+                // Prepare JSON body with hex strings delimited by dashes
+                var body = new
+                {
+                    EncryptedString = BitConverter.ToString(encryptedString),
+                    EncryptedSymKey = BitConverter.ToString(encryptedKey),
+                    EncryptedIV = BitConverter.ToString(encryptedIV)
+                };
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, BaseUrl + "protected/mashify");
+                request.Headers.Add("ApiKey", currentApiKey);
+                request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+
+                var response = await client.SendAsync(request);
+                string resultHex = await response.Content.ReadAsStringAsync();
+                resultHex = resultHex.Trim('"'); // Clean JSON quotes
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Decrypt the returned hex using the same AES key and IV
+                    byte[] encryptedResponseBytes = resultHex.Split('-').Select(x => Convert.ToByte(x, 16)).ToArray();
+
+                    using var decryptor = aes.CreateDecryptor(aesKey, aesIV);
+                    byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedResponseBytes, 0, encryptedResponseBytes.Length);
+
+                    Console.WriteLine(Encoding.ASCII.GetString(decryptedBytes));
+                }
+                else
+                {
+                    Console.WriteLine("An error occurred!");
+                }
+            }
+            catch (Exception)
+            {
+                // Requirement: Output "An error occurred!" if the hex is invalid
+                Console.WriteLine("An error occurred!");
+            }
+        }
+
         #endregion
     }
 }

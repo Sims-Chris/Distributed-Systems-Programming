@@ -1,9 +1,10 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using DistSysAcwServer.Models;
 using DistSysAcwServer.Pipeline.Auth;
 using DistSysAcwServer.Shared; // Ensure you include this namespace
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace DistSysAcwServer.Controllers
 {
@@ -60,6 +61,7 @@ namespace DistSysAcwServer.Controllers
         }
 
         [HttpGet("GetPublicKey")]
+        [Authorize(Roles = "User, Admin")]
         public IActionResult GetPublicKey()
         {
             // Requirement: Return the server's RSA public key in XML format [cite: 234, 626]
@@ -96,5 +98,88 @@ namespace DistSysAcwServer.Controllers
                 return BadRequest("Bad Request");
             }
         }
+        // Inside ProtectedController.cs
+
+        [Authorize(Roles = "Admin")] // Requirement: Admin access only
+        [HttpPost("Mashify")] // Requirement: JSON object in the body
+        public IActionResult Mashify([FromBody] MashifyRequest request)
+        {
+            if (request == null ||
+                string.IsNullOrEmpty(request.EncryptedString) ||
+                string.IsNullOrEmpty(request.EncryptedSymKey) ||
+                string.IsNullOrEmpty(request.EncryptedIV))
+            {
+                return BadRequest("Bad Request"); // Requirement: 400 if error
+            }
+
+            try
+            {
+                // 1. Get the RSA provider for decryption
+                RSACryptoServiceProvider rsa = RsaKeyService.GetProvider();
+
+                // 2. Helper to convert hex strings with dashes back to byte arrays
+                byte[] encryptedStringBytes = HexStringToByteArray(request.EncryptedString);
+                byte[] encryptedSymKeyBytes = HexStringToByteArray(request.EncryptedSymKey);
+                byte[] encryptedIVBytes = HexStringToByteArray(request.EncryptedIV);
+
+                // 3. Decrypt all three parameters using RSA with OaepSHA1 padding
+                byte[] decryptedStringBytes = rsa.Decrypt(encryptedStringBytes, RSAEncryptionPadding.OaepSHA1);
+                byte[] decryptedSymKey = rsa.Decrypt(encryptedSymKeyBytes, RSAEncryptionPadding.OaepSHA1);
+                byte[] decryptedIV = rsa.Decrypt(encryptedIVBytes, RSAEncryptionPadding.OaepSHA1);
+
+                string originalString = Encoding.ASCII.GetString(decryptedStringBytes);
+
+                // 4. Mashify the string: Vowels to 'X' and Reverse
+                string mashifiedString = MashifyLogic(originalString);
+
+                // 5. Encrypt the mashified string using the client's symmetric (AES) key and IV
+                byte[] mashifiedBytes = Encoding.ASCII.GetBytes(mashifiedString);
+                byte[] encryptedMashifiedBytes;
+
+                using (Aes aes = Aes.Create())
+                {
+                    aes.Key = decryptedSymKey;
+                    aes.IV = decryptedIV;
+                    aes.Mode = CipherMode.CBC; // Standard AES mode
+                    aes.Padding = PaddingMode.PKCS7;
+
+                    using (var encryptor = aes.CreateEncryptor())
+                    {
+                        encryptedMashifiedBytes = encryptor.TransformFinalBlock(mashifiedBytes, 0, mashifiedBytes.Length);
+                    }
+                }
+
+                // 6. Log the activity (without compromising encrypted data)
+                UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/Mashify");
+
+                // 7. Return the newly encrypted string as a hex string with dashes
+                return Ok(BitConverter.ToString(encryptedMashifiedBytes));
+            }
+            catch (Exception)
+            {
+                return BadRequest("Bad Request"); // Requirement: 400 if error occurs
+            }
+        }
+
+        // Helper method for the "Mashify" logic
+        private string MashifyLogic(string input)
+        {
+            char[] vowels = { 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U' };
+
+            // Step 1: Convert all vowels to 'X'
+            char[] chars = input.Select(c => vowels.Contains(c) ? 'X' : c).ToArray();
+
+            // Step 2: Reverse the string
+            Array.Reverse(chars);
+
+            return new string(chars);
+        }
+
+        // Helper to handle the hex format with dashes
+        private byte[] HexStringToByteArray(string hex)
+        {
+            return hex.Split('-').Select(x => Convert.ToByte(x, 16)).ToArray();
+        }
     }
 }
+    
