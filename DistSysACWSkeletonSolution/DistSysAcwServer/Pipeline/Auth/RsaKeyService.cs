@@ -15,14 +15,14 @@
                 Flags = CspProviderFlags.UseMachineKeyStore
             };
 
-            // 1. Force delete any existing key in this container first
+            // Force delete any existing key in this container first
             using (var cleaner = new RSACryptoServiceProvider(cspParams))
             {
                 cleaner.PersistKeyInCsp = false;
                 cleaner.Clear(); // This wipes the container from the OS
             }
 
-            // 2. Create the actual instance that threads will use
+            // Create the actual instance that threads will use
             // This will generate a brand new key because we just deleted the old one
             _rsa = new RSACryptoServiceProvider(2048, cspParams)
             {

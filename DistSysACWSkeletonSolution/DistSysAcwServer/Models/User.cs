@@ -12,8 +12,6 @@ namespace DistSysAcwServer.Models
     public class User
     {
         #region Task2
-        // TODO: Create a User Class for use with Entity Framework
-        // Note that you can use the [key] attribute
 
         public User() {}
 

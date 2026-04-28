@@ -29,23 +29,21 @@ namespace DistSysAcwServer.Controllers
         [HttpPost("New")]
         public IActionResult NewPost([FromBody] string username)
         {
-            // 1. Validation: Check if string is empty
             if (string.IsNullOrWhiteSpace(username))
             {
                 return BadRequest("Oops. Make sure your body contains a string with your username and your Content-Type is Content-Type:application/json");
             }
 
-            // 2. Validation: Check if username is taken
+            // Check if username is taken
             if (DbContext.Users.Any(u => u.UserName == username))
             {
-                // 403 Forbidden
                 return StatusCode(403, "Oops. This username is already in use. Please try again with a new username.");
             }
 
-            // 3. Determine Role: First user is Admin, others are User
+            // First user is Admin, others are User
             string role = DbContext.Users.Any() ? "User" : "Admin";
 
-            // 4. Create User
+            // Create User
             User newUser = new User
             {
                 ApiKey = System.Guid.NewGuid().ToString(),
@@ -56,7 +54,7 @@ namespace DistSysAcwServer.Controllers
             DbContext.Users.Add(newUser);
             DbContext.SaveChanges();
 
-            // 5. Return the API Key
+            // Return the API Key
             return Ok(newUser.ApiKey);
         }
 
@@ -64,12 +62,12 @@ namespace DistSysAcwServer.Controllers
         [HttpDelete("RemoveUser")]
         public IActionResult RemoveUser([FromQuery] string username)
         {
-            // 1. Identify the requester from the Task 5 Authentication Claims
+            // Identify the requester from the Task 5 Authentication Claims
             string requesterApiKey = Request.Headers["ApiKey"];
             string requesterName = User.Identity.Name;
             bool isAdmin = User.IsInRole("Admin");
 
-            // 2. Logic: Admin can delete anyone; Users can only delete themselves
+            // Admin can delete anyone; Users can only delete themselves
             if (isAdmin || requesterName == username)
             {
                 // Find the user to delete
@@ -79,14 +77,13 @@ namespace DistSysAcwServer.Controllers
                 {
                     bool success = UserProvider.DeleteUserByUsername(username);
 
-                    // Log the operation
                     UserProvider.LogActivity(requesterApiKey, $"User requested /api/User/RemoveUser for {username}");
 
-                    if (success) { return Ok(true); } // Successfully deleted
+                    if (success) { return Ok(true); }
                 }
             }
 
-            // 3. Return false if user doesn't exist, or requester lacks permission
+            // Return false if user doesn't exist, or requester lacks permission
             return Ok(false);
         }
 
@@ -96,20 +93,20 @@ namespace DistSysAcwServer.Controllers
         {
             try
             {
-                // 1. Validation: Check if role is valid
+                // Check if role is valid
                 if (request.role != "User" && request.role != "Admin")
                 {
                     return BadRequest("NOT DONE: Role does not exist");
                 }
 
-                // 2. Validation: Check if username exists
+                //  Check if username exists
                 var user = DbContext.Users.FirstOrDefault(u => u.UserName == request.username);
                 if (user == null)
                 {
                     return BadRequest("NOT DONE: Username does not exist");
                 }
 
-                // 3. Update the role
+                // Update the role
                 user.Role = request.role;
                 DbContext.SaveChanges();
 
@@ -118,7 +115,7 @@ namespace DistSysAcwServer.Controllers
             }
             catch (Exception)
             {
-                // 4. Fallback for all other error cases
+                // Fallback for all other error cases
                 return BadRequest("NOT DONE: An error occured");
             }
         }

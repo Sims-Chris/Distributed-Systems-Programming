@@ -8,7 +8,7 @@ using System.Text;
 
 namespace DistSysAcwServer.Controllers
 {
-    [Authorize(Roles = "Admin, User")] // Requirement: Authorized for User or Admin [cite: 218, 610]
+    [Authorize(Roles = "Admin, User")]
     [Route("api/[controller]")]
     [ApiController]
     public class ProtectedController : BaseController
@@ -29,7 +29,7 @@ namespace DistSysAcwServer.Controllers
         {
             if (string.IsNullOrEmpty(message))
             {
-                return BadRequest("Bad Request"); // Requirement: 400 if no message [cite: 228, 620]
+                return BadRequest("Bad Request");
             }
 
             using (SHA1 sha1Hash = SHA1.Create())
@@ -47,7 +47,7 @@ namespace DistSysAcwServer.Controllers
         {
             if (string.IsNullOrEmpty(message))
             {
-                return BadRequest("Bad Request"); // Requirement: 400 if no message [cite: 231, 623]
+                return BadRequest("Bad Request");
             }
 
             using (SHA256 sha256Hash = SHA256.Create())
@@ -61,10 +61,8 @@ namespace DistSysAcwServer.Controllers
         }
 
         [HttpGet("GetPublicKey")]
-        [Authorize(Roles = "User, Admin")]
         public IActionResult GetPublicKey()
         {
-            // Requirement: Return the server's RSA public key in XML format [cite: 234, 626]
             using (RSA rsa = RSA.Create())
             {
                 string publicKeyXml = RsaKeyService.GetPublicKeyXml();
@@ -98,10 +96,9 @@ namespace DistSysAcwServer.Controllers
                 return BadRequest("Bad Request");
             }
         }
-        // Inside ProtectedController.cs
 
-        [Authorize(Roles = "Admin")] // Requirement: Admin access only
-        [HttpGet("Mashify")] // Requirement: JSON object in the body
+        [Authorize(Roles = "Admin")]
+        [HttpGet("Mashify")]
         public IActionResult Mashify([FromBody] MashifyRequest request)
         {
             if (request == null ||
@@ -109,30 +106,30 @@ namespace DistSysAcwServer.Controllers
                 string.IsNullOrEmpty(request.EncryptedSymKey) ||
                 string.IsNullOrEmpty(request.EncryptedIV))
             {
-                return BadRequest("Bad Request"); // Requirement: 400 if error
+                return BadRequest("Bad Request");
             }
 
             try
             {
-                // 1. Get the RSA provider for decryption
+                // Get the RSA provider for decryption
                 RSACryptoServiceProvider rsa = RsaKeyService.GetProvider();
 
-                // 2. Helper to convert hex strings with dashes back to byte arrays
+                // Helper to convert hex strings with dashes back to byte arrays
                 byte[] encryptedStringBytes = HexStringToByteArray(request.EncryptedString);
                 byte[] encryptedSymKeyBytes = HexStringToByteArray(request.EncryptedSymKey);
                 byte[] encryptedIVBytes = HexStringToByteArray(request.EncryptedIV);
 
-                // 3. Decrypt all three parameters using RSA with OaepSHA1 padding
+                // Decrypt all three parameters using RSA with OaepSHA1 padding
                 byte[] decryptedStringBytes = rsa.Decrypt(encryptedStringBytes, RSAEncryptionPadding.OaepSHA1);
                 byte[] decryptedSymKey = rsa.Decrypt(encryptedSymKeyBytes, RSAEncryptionPadding.OaepSHA1);
                 byte[] decryptedIV = rsa.Decrypt(encryptedIVBytes, RSAEncryptionPadding.OaepSHA1);
 
                 string originalString = Encoding.ASCII.GetString(decryptedStringBytes);
 
-                // 4. Mashify the string: Vowels to 'X' and Reverse
+                // Mashify the string: Vowels to 'X' and Reverse
                 string mashifiedString = MashifyLogic(originalString);
 
-                // 5. Encrypt the mashified string using the client's symmetric (AES) key and IV
+                // Encrypt the mashified string using the client's symmetric (AES) key and IV
                 byte[] mashifiedBytes = Encoding.ASCII.GetBytes(mashifiedString);
                 byte[] encryptedMashifiedBytes;
 
@@ -149,10 +146,10 @@ namespace DistSysAcwServer.Controllers
                     }
                 }
 
-                // 6. Log the activity (without compromising encrypted data)
+                // Log the activity (without compromising encrypted data)
                 UserProvider.LogActivity(Request.Headers["ApiKey"], "User requested /api/Protected/Mashify");
 
-                // 7. Return the newly encrypted string as a hex string with dashes
+                // Return the newly encrypted string as a hex string with dashes
                 return Ok(BitConverter.ToString(encryptedMashifiedBytes));
             }
             catch (Exception)
@@ -166,10 +163,10 @@ namespace DistSysAcwServer.Controllers
         {
             char[] vowels = { 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U' };
 
-            // Step 1: Convert all vowels to 'X'
+            // Convert all vowels to 'X'
             char[] chars = input.Select(c => vowels.Contains(c) ? 'X' : c).ToArray();
 
-            // Step 2: Reverse the string
+            // Reverse the string
             Array.Reverse(chars);
 
             return new string(chars);

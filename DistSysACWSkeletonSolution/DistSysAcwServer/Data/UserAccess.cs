@@ -56,12 +56,12 @@ namespace DistSysAcwServer.Data
 
         public bool DeleteUserByUsername(string username)
     {
-        // 1. Find the user first
+        // Find the user
         var user = _dbContext.Users.FirstOrDefault(u => u.UserName == username);
 
         if (user != null)
         {
-            // 2. SAFETY: Manually fetch the logs for this specific API Key 
+            // Manually fetch the logs for this specific API Key 
             // This bypasses any issues with the virtual collection not loading
             var userLogs = _dbContext.Logs.Where(l => l.UserApiKey == user.ApiKey).ToList();
 
@@ -77,10 +77,10 @@ namespace DistSysAcwServer.Data
                 _dbContext.LogArchives.Add(archivedLog);
             }
 
-            // 4. Remove the user (this will trigger the cascade delete for active logs)
+            // Remove the user (this will trigger the cascade delete for active logs)
             _dbContext.Users.Remove(user);
 
-            // 5. Save all changes
+            // Save all changes
             _dbContext.SaveChanges();
             return true;
         }
@@ -92,7 +92,6 @@ namespace DistSysAcwServer.Data
             var user = GetUserByApiKey(apiKey);
             if (user != null)
             {
-                // Use the new constructor from Step 1
                 Log newLog = new Log(logMessage);
 
                 // Add to the user's collection

@@ -16,7 +16,7 @@ namespace DistSysAcwClient
         private static string currentApiKey = "";
         private static string _storedServerPublicKeyXML = null;
 
-        // Ensure this ends with a forward slash for easy concatenation
+       
         //private const string BaseUrl = "http://distsysacwserver.net.dcs.hull.ac.uk/4710625/Api/";
         private const string BaseUrl = "http://localhost:53415/api/";
 
@@ -42,13 +42,13 @@ namespace DistSysAcwClient
         {
             try
             {
+                #region Input Handling
                 // We create a lowercase version for command checking
                 string lowerInput = input.ToLower();
 
                 // 1. TalkBack Hello
                 if (lowerInput.StartsWith("talkback hello"))
                 {
-                    // Use the original 'input' for the message to preserve casing (e.g. "Hello" vs "hello")
                     string message = input.Substring(14).Trim();
                     await GetRequest($"talkback/hello?message={Uri.EscapeDataString(message)}");
                 }
@@ -116,21 +116,24 @@ namespace DistSysAcwClient
                 {
                     if (CheckAuth()) await GetPublicKey("protected/getpublickey", true);
                 }
-
+                // 12. Protected Sign
                 else if (lowerInput.StartsWith("protected sign"))
                 {
                     string msg = input.Substring(14).Trim();
                     if (CheckAuth()) await ProtectedSign(msg);
                 }
+                // 13. Protected Mashify
                 else if (lowerInput.StartsWith("protected mashify"))
                 {
                     string message = input.Substring(17).Trim();
                     if (CheckAuth()) await ProtectedMashify(message);
                 }
+                // Unknown command
                 else
                 {
                     Console.WriteLine("Unknown command.");
                 }
+                #endregion
             }
             catch (Exception ex)
             {
@@ -154,8 +157,7 @@ namespace DistSysAcwClient
         private static async Task UserPost(string username)
         {
             Console.WriteLine("...please wait...");
-            // Requirement says "with 'UserOne' in the request body" 
-            // Usually, this means a raw JSON string: "UserOne"
+            
             var content = new StringContent(JsonSerializer.Serialize(username), Encoding.UTF8, "application/json");
 
             var response = await client.PostAsync(BaseUrl + "user/new", content);
@@ -184,7 +186,7 @@ namespace DistSysAcwClient
             var response = await client.SendAsync(request);
             string result = await response.Content.ReadAsStringAsync();
 
-            // Standardizing output to "True" or "False" as per instructions
+            // Standardizing output to "True" or "False" 
             if (bool.TryParse(result, out bool deleted))
                 Console.WriteLine(deleted ? "True" : "False");
             else
@@ -216,7 +218,7 @@ namespace DistSysAcwClient
             return true;
         }
 
-        private static string _serverPublicKey; // Variable to store the key
+        private static string _serverPublicKey; 
 
         private static async Task GetPublicKey(string param, bool useAuth = false)
         {
@@ -236,7 +238,6 @@ namespace DistSysAcwClient
 
                 if (response.IsSuccessStatusCode)
                 {
-                    // Store the XML string for later encryption use
                     _storedServerPublicKeyXML = await response.Content.ReadAsStringAsync();
 
                     if (!string.IsNullOrEmpty(_storedServerPublicKeyXML))
@@ -250,9 +251,7 @@ namespace DistSysAcwClient
                 }
                 else
                 {
-                    // Optional: for debugging, you could log the status code here
                     Console.WriteLine("Couldn’t Get the Public Key as it wasnt fetched");
-                    Console.WriteLine(response);
                 }
             }
             catch (Exception)
@@ -297,7 +296,6 @@ namespace DistSysAcwClient
 
         private static async Task ProtectedMashify(string message)
         {
-            // Requirement: Check if public key exists
             if (string.IsNullOrEmpty(_storedServerPublicKeyXML))
             {
                 Console.WriteLine("Client doesn't yet have the public key");
@@ -361,7 +359,6 @@ namespace DistSysAcwClient
             }
             catch (Exception)
             {
-                // Requirement: Output "An error occurred!" if the hex is invalid
                 Console.WriteLine("An error occurred as hex is invalid");
             }
         }
