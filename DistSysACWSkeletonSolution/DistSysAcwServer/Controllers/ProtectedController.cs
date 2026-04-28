@@ -101,7 +101,7 @@ namespace DistSysAcwServer.Controllers
         // Inside ProtectedController.cs
 
         [Authorize(Roles = "Admin")] // Requirement: Admin access only
-        [HttpPost("Mashify")] // Requirement: JSON object in the body
+        [HttpGet("Mashify")] // Requirement: JSON object in the body
         public IActionResult Mashify([FromBody] MashifyRequest request)
         {
             if (request == null ||

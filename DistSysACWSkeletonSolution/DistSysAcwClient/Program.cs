@@ -17,8 +17,8 @@ namespace DistSysAcwClient
         private static string _storedServerPublicKeyXML = null;
 
         // Ensure this ends with a forward slash for easy concatenation
-        private const string BaseUrl = "http://distsysacwserver.net.dcs.hull.ac.uk/4710625/Api/";
-        //private const string BaseUrl = "http://localhost:53415/api/";
+        //private const string BaseUrl = "http://distsysacwserver.net.dcs.hull.ac.uk/4710625/Api/";
+        private const string BaseUrl = "http://localhost:53415/api/";
 
         static async Task Main(string[] args)
         {
@@ -336,7 +336,7 @@ namespace DistSysAcwClient
                     EncryptedIV = BitConverter.ToString(encryptedIV)
                 };
 
-                using var request = new HttpRequestMessage(HttpMethod.Post, BaseUrl + "protected/mashify");
+                using var request = new HttpRequestMessage(HttpMethod.Get, BaseUrl + "protected/mashify");
                 request.Headers.Add("ApiKey", currentApiKey);
                 request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
@@ -356,13 +356,13 @@ namespace DistSysAcwClient
                 }
                 else
                 {
-                    Console.WriteLine("An error occurred!");
+                    Console.WriteLine("An error occurred due to negative responce");
                 }
             }
             catch (Exception)
             {
                 // Requirement: Output "An error occurred!" if the hex is invalid
-                Console.WriteLine("An error occurred!");
+                Console.WriteLine("An error occurred as hex is invalid");
             }
         }
 
